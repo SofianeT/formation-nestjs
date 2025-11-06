@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -6,11 +10,11 @@ export class PositionService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getAllPositions() {
-    return this.prisma.position.findMany();
+    return this.prisma.positions.findMany();
   }
 
   async getOnePosition(id: number) {
-    const position = await this.prisma.position.findUnique({
+    const position = await this.prisma.positions.findUnique({
       where: { id },
     });
     if (!position) {
@@ -20,39 +24,43 @@ export class PositionService {
   }
 
   async createPosition(data) {
-    const positionExists = await this.prisma.position.findUnique({
+    // use findFirst for non-unique fields (or use findUnique only if `name` is unique in the schema)
+    const positionExists = await this.prisma.positions.findFirst({
       where: { name: data.name },
     });
-    if (!positionExists) {
-      throw new NotFoundException(`Position with name ${data.name} not found`);
+    if (positionExists) {
+      throw new BadRequestException(
+        `Position with name ${data.name} already exists`,
+      );
     }
-    return this.prisma.position.create({
+    return this.prisma.positions.create({
       data,
     });
   }
 
   async updatePosition(id: number, data) {
-    const position = await this.prisma.position.update({
+    // check existence first to provide a clear NotFoundException
+    const existing = await this.prisma.positions.findUnique({
       where: { id },
-      data,
     });
-    if (!position) {
+    if (!existing) {
       throw new NotFoundException(`Position with id ${id} not found`);
     }
-    return this.prisma.position.update({
+    return this.prisma.positions.update({
       where: { id },
       data,
     });
   }
 
   async deletePosition(id: number) {
-    const position = await this.prisma.position.delete({
+    // check existence first to provide a clear NotFoundException
+    const existing = await this.prisma.positions.findUnique({
       where: { id },
     });
-    if (!position) {
+    if (!existing) {
       throw new NotFoundException(`Position with id ${id} not found`);
     }
-    return this.prisma.position.delete({
+    return this.prisma.positions.delete({
       where: { id },
     });
   }
